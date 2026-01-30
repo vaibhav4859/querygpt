@@ -73,15 +73,33 @@ const ChatHistory = ({ messages, isLoading }: ChatHistoryProps) => {
             ) : (
               <div className="space-y-3">
                 {message.content && (
-                  <p className="text-foreground">{message.content}</p>
+                  <div className="text-foreground space-y-2">
+                    {message.content.split(/\n\n+/).map((block, i) => (
+                      <div key={i}>
+                        {block.split(/\n/).map((line, j) => {
+                          const heading = line.match(/^###?\s*(.*)$/);
+                          if (heading) {
+                            return (
+                              <div key={j} className="font-semibold text-foreground mt-3 first:mt-0">
+                                {heading[1]}
+                              </div>
+                            );
+                          }
+                          return (
+                            <p key={j} className="text-sm leading-relaxed">
+                              {line}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 )}
                 {message.query && (
                   <QueryResult
                     query={message.query}
                     explanation={message.explanation}
                     optimizations={message.optimizations}
-                    isOptimized={true}
-                    executionTime="~120ms"
                   />
                 )}
               </div>
@@ -93,18 +111,18 @@ const ChatHistory = ({ messages, isLoading }: ChatHistoryProps) => {
       {/* Loading State */}
       {isLoading && (
         <div className="flex gap-4">
-          <div className="w-8 h-8 rounded-lg bg-accent text-accent-foreground flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0">
             <Bot className="w-4 h-4" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
               <span>SalesCode QueryGPT</span>
-              <span>is thinking...</span>
+              <span>Generating your SQL query…</span>
             </div>
             <div className="space-y-2">
-              <div className="h-4 w-3/4 animate-shimmer rounded" />
-              <div className="h-4 w-1/2 animate-shimmer rounded" />
-              <div className="h-24 w-full animate-shimmer rounded-xl" />
+              <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+              <div className="h-24 w-full animate-pulse rounded-xl bg-muted" />
             </div>
           </div>
         </div>

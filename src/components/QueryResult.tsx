@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Check, Play, ChevronDown, ChevronUp, Zap, Clock, Shield } from "lucide-react";
+import { Copy, Check, ChevronDown, ChevronUp, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -7,16 +7,12 @@ interface QueryResultProps {
   query: string;
   explanation?: string;
   optimizations?: string[];
-  executionTime?: string;
-  isOptimized?: boolean;
 }
 
-const QueryResult = ({ 
-  query, 
-  explanation, 
+const QueryResult = ({
+  query,
+  explanation,
   optimizations = [],
-  executionTime,
-  isOptimized = true 
 }: QueryResultProps) => {
   const [copied, setCopied] = useState(false);
   const [showExplanation, setShowExplanation] = useState(true);
@@ -51,49 +47,25 @@ const QueryResult = ({
       {/* Query Card */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 bg-secondary/30 border-b border-border">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-foreground">Generated SOQL</span>
-            {isOptimized && (
-              <span className="flex items-center gap-1 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                <Zap className="w-3 h-3" />
-                Optimized
-              </span>
+          <span className="text-sm font-medium text-foreground">Generated SQL</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={copyToClipboard}
+            className="h-8 gap-2 text-muted-foreground hover:text-foreground"
+          >
+            {copied ? (
+              <>
+                <Check className="w-4 h-4 text-primary" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4" />
+                Copy
+              </>
             )}
-            {executionTime && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                {executionTime}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={copyToClipboard}
-              className="h-8 gap-2 text-muted-foreground hover:text-foreground"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4 text-primary" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  Copy
-                </>
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <Play className="w-4 h-4" />
-              Execute
-            </Button>
-          </div>
+          </Button>
         </div>
         
         <div className="p-4">
