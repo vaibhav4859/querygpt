@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Dark theme as default - developer tool aesthetic */
+    --background: 220 20% 7%;
+    --foreground: 210 20% 92%;
+
+    --card: 220 18% 10%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 220 18% 12%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 168 80% 45%;
+    --primary-foreground: 220 20% 7%;
+
+    --secondary: 220 18% 15%;
+    --secondary-foreground: 210 20% 85%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 200 70% 50%;
+    --accent-foreground: 220 20% 7%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 15% 18%;
+    --input: 220 15% 15%;
+    --ring: 168 80% 45%;
+
+    --radius: 0.75rem;
+
+    /* Schema panel colors */
+    --schema-table: 168 70% 40%;
+    --schema-field: 200 65% 55%;
+    --schema-relation: 280 60% 60%;
+    
+    /* Query syntax colors */
+    --syntax-keyword: 168 80% 50%;
+    --syntax-table: 200 70% 60%;
+    --syntax-field: 45 90% 65%;
+    --syntax-string: 140 60% 55%;
+    --syntax-number: 280 60% 65%;
+
+    /* Glow effects */
+    --glow-primary: 168 80% 45%;
+    --glow-accent: 200 70% 50%;
+
+    --sidebar-background: 220 18% 8%;
+    --sidebar-foreground: 210 15% 75%;
+    --sidebar-primary: 168 80% 45%;
+    --sidebar-primary-foreground: 220 20% 7%;
+    --sidebar-accent: 220 15% 14%;
+    --sidebar-accent-foreground: 210 15% 85%;
+    --sidebar-border: 220 15% 15%;
+    --sidebar-ring: 168 80% 45%;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* Glow animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px -5px hsl(var(--glow-primary) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px -5px hsl(var(--glow-primary) / 0.5);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted-foreground) / 0.3) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Code block styling */
+.code-block {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
