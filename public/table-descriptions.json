@@ -1,0 +1,22 @@
+{
+  "ck_delivery_pjp": "Delivery PJP (plan journey plan) – planned delivery visits by beat/outlet",
+  "ck_location": "Locations / geography hierarchy – areas, regions, zones, cities, etc.",
+  "ck_order_details": "Order line items – per-SKU quantities and amounts for each order",
+  "ck_order_history": "Order status history – status changes and audit for orders",
+  "ck_orders": "Orders – header-level order records (outlet, dates, totals)",
+  "ck_outlet_details": "Outlet / store details – retail outlets, addresses, contacts",
+  "ck_outlet_details_hierarchymetadata": "Outlet hierarchy metadata – links outlets to hierarchy metadata",
+  "ck_outlet_product_info": "Outlet product info – product/price list info per outlet",
+  "ck_productdetails": "Product/SKU details – SKU master (brand, category, MRP, etc.)",
+  "ck_productmetadata": "Product pricing and metadata – prices and metadata per SKU/location",
+  "ck_route_info": "Route information – routes, outlets, salesmen",
+  "ck_sales": "Sales transactions – invoice/sales header (amounts, outlet, dates)",
+  "ck_sales_details": "Sales line items – per-SKU quantities and amounts for each sale",
+  "ck_sales_history": "Sales history – status/transaction history for sales",
+  "ck_user": "Users – user accounts, login, hierarchy",
+  "ck_userdesignation": "User designations – user-to-designation mapping",
+  "dms_loadout": "Loadout (distribution) – load-out header (quantities, vehicle, dates)",
+  "dms_loadout_details": "Loadout details – per-outlet/invoice load-out lines",
+  "dms_loadout_items": "Loadout line items – per-SKU quantities in load-out",
+  "profile": "Profiles – config/profile records (attributes, payload, type)"
+}

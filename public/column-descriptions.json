@@ -1,0 +1,174 @@
+{
+  "ck_delivery_pjp": {
+    "lob": "Line of business",
+    "outletcode": "Outlet identifier (FK to ck_outlet_details.outletcode)",
+    "supplierid": "Supplier/distributor identifier",
+    "loginid": "User login id (FK to ck_user.loginid)",
+    "pjp_date": "Plan journey plan date",
+    "pjp_plan": "Plan journey plan type/name",
+    "outlet_visited": "Whether the outlet was visited (bit)",
+    "day_and_frequency": "JSON: visit days and frequency"
+  },
+  "ck_location": {
+    "lob": "Line of business",
+    "location_hierarchy": "Unique path string for location in hierarchy",
+    "salescode_id": "Sales code identifier"
+  },
+  "ck_order_details": {
+    "lob": "Line of business",
+    "skucode": "SKU/product code (FK to product)",
+    "order_id": "FK to ck_orders.id",
+    "order_number": "Order number (human-readable)",
+    "location_hierarchy": "Location hierarchy path",
+    "hierarchy": "Outlet/location hierarchy path (longtext)",
+    "normalized_quantity": "Quantity in base unit",
+    "normalized_volume": "Volume in base unit",
+    "nw": "Net weight",
+    "batch_code": "Batch identifier"
+  },
+  "ck_orders": {
+    "lob": "Line of business",
+    "outletcode": "Outlet identifier (FK to ck_outlet_details)",
+    "supplierid": "Supplier/distributor identifier",
+    "location_hierarchy": "Location hierarchy path",
+    "hierarchy": "Outlet hierarchy path",
+    "user_hierarchy": "User's org hierarchy path",
+    "loginid": "User login id",
+    "normalized_quantity": "Total quantity in base unit",
+    "normalized_volume": "Total volume in base unit",
+    "nw": "Net weight",
+    "in_beat": "Whether order is in beat (bit)",
+    "in_range": "Whether order is in range (bit)",
+    "processing_status": "e.g. PENDING",
+    "sales_value": "Sales value amount",
+    "creation_time": "Date of order creation"
+  },
+  "ck_outlet_details": {
+    "lob": "Line of business",
+    "outletcode": "Unique outlet identifier",
+    "location_hierarchy": "Location hierarchy path",
+    "loginid": "Assigned user login id",
+    "hierarchy": "Outlet hierarchy path (longtext)",
+    "normalized_hierarchy": "Normalised hierarchy path",
+    "doo": "Date of onboarding",
+    "prodauthcode": "Product authorisation code",
+    "vpo": "Vertical/territory code",
+    "tcs_eligibility": "TCS eligibility flag",
+    "key_account": "Key account flag"
+  },
+  "ck_outlet_product_info": {
+    "lob": "Line of business",
+    "outlet_code": "Outlet identifier",
+    "loginid": "User login id",
+    "pricing_type": "e.g. OUTLET"
+  },
+  "ck_productdetails": {
+    "lob": "Line of business",
+    "sku_code": "SKU/product code",
+    "mrp": "Maximum retail price",
+    "case_mrp": "MRP per case",
+    "other_unit_mrp": "MRP for other unit",
+    "case_to_piece_quantity": "Conversion: case to piece",
+    "case_to_other_unit_quantity": "Conversion: case to other unit",
+    "piece_to_volume": "Conversion: piece to volume",
+    "uom": "Unit of measurement",
+    "rec_priority": "Recommendation priority",
+    "fssai_number": "FSSAI licence number",
+    "bbd": "Best before date",
+    "shelf_life_days": "Shelf life in days",
+    "nw": "Net weight (if used)"
+  },
+  "ck_productmetadata": {
+    "lob": "Line of business",
+    "sku_code": "SKU code",
+    "location_hierarchy": "Location hierarchy path",
+    "loginid": "User login id",
+    "fk_productmetadata": "Parent product metadata id",
+    "case_ptr": "Case price-to-retail factor",
+    "pack_ptr": "Pack price-to-retail factor",
+    "other_unit_ptr": "Other unit price-to-retail factor",
+    "outletcode": "Outlet-specific pricing",
+    "wh_code": "Warehouse code",
+    "ssp": "Suggested selling price",
+    "from_date": "Price valid from",
+    "to_date": "Price valid to"
+  },
+  "ck_route_info": {
+    "lob": "Line of business",
+    "outlet_code": "Outlet on route",
+    "route_code": "Route identifier",
+    "salesman_code": "Salesperson code",
+    "prod_auth_code": "Product authorisation code"
+  },
+  "ck_sales": {
+    "lob": "Line of business",
+    "invoice_number": "Unique invoice number",
+    "outletcode": "Outlet identifier",
+    "supplierid": "Supplier identifier",
+    "loginid": "User login id",
+    "user_hierarchy": "User hierarchy path",
+    "hierarchy": "Outlet hierarchy path",
+    "reference_number": "Order/invoice reference",
+    "normalized_quantity": "Quantity in base unit",
+    "normalized_volume": "Volume in base unit",
+    "nw": "Net weight",
+    "in_beat": "In beat flag (bit)",
+    "in_range": "In range flag (bit)",
+    "inv_ser_no": "Invoice serial number"
+  },
+  "ck_sales_details": {
+    "lob": "Line of business",
+    "skucode": "SKU/product code",
+    "sale_id": "FK to ck_sales.id",
+    "supplierid": "Supplier identifier",
+    "location_hierarchy": "Location hierarchy path",
+    "hierarchy": "Outlet hierarchy path",
+    "normalized_volume": "Volume in base unit",
+    "nw": "Net weight",
+    "batch_code": "Batch identifier",
+    "batch_id": "Batch id"
+  },
+  "ck_user": {
+    "lob": "Line of business",
+    "loginid": "Unique login id",
+    "useraccountid": "User account identifier",
+    "hierarchy": "User's org hierarchy path",
+    "location_hierarchy": "Location hierarchy path",
+    "assigned_hierarchy": "Assigned location/outlet hierarchy",
+    "normalized_hierarchy": "Normalised hierarchy path",
+    "doa": "Date of joining",
+    "prodauthcode": "Product authorisation code"
+  },
+  "ck_userdesignation": {
+    "login_id": "FK to ck_user.loginid"
+  },
+  "dms_loadout": {
+    "load_number": "Unique load identifier",
+    "load_out_status": "Status of load out",
+    "load_out_type": "Type of load out",
+    "salesman_id": "Salesperson identifier",
+    "loadout_source": "Source of load out"
+  },
+  "dms_loadout_details": {
+    "load_number": "FK to dms_loadout",
+    "outlet_code": "Outlet identifier",
+    "preseller_id": "Pre-seller/salesperson id",
+    "route_code": "Route identifier",
+    "inv_ser_no": "Invoice serial number"
+  },
+  "dms_loadout_items": {
+    "load_out_details_id": "FK to dms_loadout_details.id",
+    "sku_code": "SKU code",
+    "mrp": "Maximum retail price",
+    "case_qty": "Case quantity",
+    "case_qty_left": "Case quantity remaining",
+    "piece_qty": "Piece quantity",
+    "piece_qty_left": "Piece quantity remaining",
+    "other_qty": "Other unit quantity",
+    "other_qty_left": "Other unit quantity remaining"
+  },
+  "profile": {
+    "lob": "Line of business",
+    "location_hierarchy": "Location hierarchy path"
+  }
+}

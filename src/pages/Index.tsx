@@ -10,22 +10,65 @@ import ExampleQueries from "@/components/ExampleQueries";
 import HistoryPanel from "@/components/HistoryPanel";
 import { useQueryGeneration } from "@/hooks/useQueryGeneration";
 import { useAuth } from "@/hooks/useAuth";
+import { loadSchema } from "@/data/schema";
+import type { TableSchema } from "@/data/schema";
+import type { SchemaContext } from "@/hooks/useQueryGeneration";
+
+const TABLE_DESCRIPTIONS_URL = "/table-descriptions.json";
+const COLUMN_DESCRIPTIONS_URL = "/column-descriptions.json";
+const TABLE_RELATIONSHIPS_URL = "/table-relationships.json";
 
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState("lbpl");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [schemaContext, setSchemaContext] = useState<SchemaContext | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated } = useAuth();
-  const { generateQuery, isLoading } = useQueryGeneration();
+  const {
+    suggestTables,
+    generateQuery,
+    isLoading,
+    isSuggestingTables,
+  } = useQueryGeneration();
+
+  useEffect(() => {
+    Promise.all([
+      fetch(TABLE_DESCRIPTIONS_URL).then((r) => r.json()),
+      fetch(COLUMN_DESCRIPTIONS_URL).then((r) => r.json()),
+      fetch(TABLE_RELATIONSHIPS_URL)
+        .then((r) => r.json())
+        .then((data: { relationships?: SchemaContext["relationships"] }) => data.relationships ?? [])
+        .catch(() => [] as SchemaContext["relationships"]),
+      loadSchema(),
+    ]).then(
+      ([
+        tableDescriptions,
+        columnDescriptions,
+        relationships,
+        schema,
+      ]: [
+        Record<string, string>,
+        Record<string, Record<string, string>>,
+        SchemaContext["relationships"],
+        TableSchema[],
+      ]) => {
+        setSchemaContext({
+          tableDescriptions,
+          columnDescriptions,
+          schema,
+          relationships,
+        });
+      }
+    );
+  }, []);
 
   const handleHistoryClick = () => {
     setHistoryPanelOpen(true);
   };
 
   const handleSubmit = async (query: string) => {
-    // Add user message
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       type: "user",
@@ -34,45 +77,95 @@ const Index = () => {
     };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Generate AI response
-    const result = await generateQuery(query, selectedTenant);
-    
+    if (!schemaContext) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          type: "assistant",
+          content: "Schema is still loading. Please try again in a moment.",
+          timestamp: new Date(),
+        },
+      ]);
+      return;
+    }
+
+    const suggested = await suggestTables(
+      query,
+      selectedTenant,
+      schemaContext.tableDescriptions
+    );
+
+    const assistantMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      type: "assistant",
+      content: "I'm planning to use the tables below to generate the query.",
+      timestamp: new Date(),
+      tableAgent: { suggestedTables: suggested },
+    };
+    setMessages((prev) => [...prev, assistantMessage]);
+  };
+
+  const handleTableConfirm = async (
+    messageId: string,
+    selectedTables: string[]
+  ) => {
+    const idx = messages.findIndex((m) => m.id === messageId);
+    if (idx < 0) return;
+    const userMessage = messages[idx - 1];
+    const naturalQuery =
+      userMessage?.type === "user" ? userMessage.content : "";
+
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId ? { ...m, tableAgent: undefined } : m
+      )
+    );
+
+    if (!schemaContext || !naturalQuery) return;
+
+    const result = await generateQuery(
+      naturalQuery,
+      selectedTenant,
+      selectedTables,
+      schemaContext
+    );
+
     if (result) {
-      const assistantMessage: ChatMessage = {
+      const sqlMessage: ChatMessage = {
         id: crypto.randomUUID(),
         type: "assistant",
         timestamp: new Date(),
-        content: result.error 
-          ? result.error 
+        content: result.error
+          ? result.error
           : "Here's your optimized SQL query:",
         query: result.error ? undefined : result.query,
         explanation: result.explanation,
         optimizations: result.optimizations,
       };
-      
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, sqlMessage]);
     }
   };
 
-  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, isSuggestingTables]);
 
   const hasMessages = messages.length > 0;
+  const tableDescriptions = schemaContext?.tableDescriptions ?? {};
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <Header 
+      <Header
         selectedTenant={selectedTenant}
         onTenantChange={setSelectedTenant}
         onHistoryClick={handleHistoryClick}
+        onLogoClick={() => setMessages([])}
       />
-      
+
       <div className="flex-1 flex overflow-hidden">
-        {/* Schema Sidebar */}
         <div
           className={`${
             sidebarOpen ? "w-72" : "w-0"
@@ -81,10 +174,8 @@ const Index = () => {
           <SchemaExplorer />
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Toggle Button */}
-          <div className="p-2 border-b border-border">
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="p-2 border-b border-border shrink-0">
             <Button
               variant="ghost"
               size="icon"
@@ -99,36 +190,40 @@ const Index = () => {
             </Button>
           </div>
 
-          {/* Chat Area */}
-          <ScrollArea className="flex-1" ref={scrollRef}>
-            <div className="max-w-4xl mx-auto p-6">
+          <ScrollArea className="flex-1 min-h-0 min-w-0" ref={scrollRef}>
+            <div className="max-w-4xl mx-auto px-6 py-6 pl-6 pr-8 min-w-0 w-full">
               {!hasMessages && (
                 <div className="py-12">
-                  {/* Welcome */}
                   <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold text-foreground mb-3">
                       Ask anything about your SalesCode data
                     </h2>
                     <p className="text-muted-foreground max-w-lg mx-auto">
-                      Describe what you need in plain English, and I'll generate optimized SQL queries instantly. 
-                      I understand your schema and apply best practices automatically.
+                      Describe what you need in plain English. I'll suggest
+                      relevant tables for you to confirm, then generate an
+                      optimized SQL query.
                     </p>
                   </div>
-
-                  {/* Example Queries */}
                   <ExampleQueries onSelect={handleSubmit} />
                 </div>
               )}
 
-              {/* Messages */}
-              <ChatHistory messages={messages} isLoading={isLoading} />
+              <ChatHistory
+                messages={messages}
+                isLoading={isLoading}
+                isSuggestingTables={isSuggestingTables}
+                tableDescriptions={tableDescriptions}
+                onTableConfirm={handleTableConfirm}
+              />
             </div>
           </ScrollArea>
 
-          {/* Input Area */}
-          <div className="border-t border-border p-6">
+          <div className="border-t border-border px-6 py-6 pl-6 pr-8 shrink-0">
             <div className="max-w-4xl mx-auto">
-              <QueryInput onSubmit={handleSubmit} isLoading={isLoading} />
+              <QueryInput
+                onSubmit={handleSubmit}
+                isLoading={isLoading || isSuggestingTables}
+              />
             </div>
           </div>
         </div>

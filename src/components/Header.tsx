@@ -16,9 +16,10 @@ interface HeaderProps {
   selectedTenant: string;
   onTenantChange: (tenant: string) => void;
   onHistoryClick: () => void;
+  onLogoClick?: () => void;
 }
 
-const Header = ({ selectedTenant, onTenantChange, onHistoryClick }: HeaderProps) => {
+const Header = ({ selectedTenant, onTenantChange, onHistoryClick, onLogoClick }: HeaderProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -34,8 +35,12 @@ const Header = ({ selectedTenant, onTenantChange, onHistoryClick }: HeaderProps)
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
-      {/* Logo */}
-      <div className="flex items-center gap-3">
+      {/* Logo – click to clear chat and show fresh start */}
+      <button
+        type="button"
+        onClick={onLogoClick}
+        className="flex items-center gap-3 text-left hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg"
+      >
         <div className="p-2 rounded-xl bg-primary/10">
           <Database className="w-6 h-6 text-primary" />
         </div>
@@ -45,7 +50,7 @@ const Header = ({ selectedTenant, onTenantChange, onHistoryClick }: HeaderProps)
           </h1>
           <p className="text-xs text-muted-foreground">Natural Language to SQL</p>
         </div>
-      </div>
+      </button>
 
       {/* Center - Tenant Selector */}
       <Popover open={open} onOpenChange={setOpen}>

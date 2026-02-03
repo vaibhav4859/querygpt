@@ -25,7 +25,7 @@ const QueryResult = ({
 
   // Simple syntax highlighting for SOQL
   const highlightQuery = (q: string) => {
-    const keywords = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'ORDER BY', 'GROUP BY', 'HAVING', 'LIMIT', 'OFFSET', 'ASC', 'DESC', 'LIKE', 'IN', 'NOT', 'NULL', 'TRUE', 'FALSE'];
+    const keywords = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'ON', 'AS', 'ORDER BY', 'GROUP BY', 'HAVING', 'LIMIT', 'OFFSET', 'ASC', 'DESC', 'LIKE', 'IN', 'NOT', 'NULL', 'TRUE', 'FALSE'];
     let highlighted = q;
     
     keywords.forEach(keyword => {
@@ -43,16 +43,16 @@ const QueryResult = ({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Query Card */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 bg-secondary/30 border-b border-border">
+    <div className="space-y-4 min-w-0 max-w-full">
+      {/* Query Card – only outer 4 corners rounded, flat junction between header and content */}
+      <div className="bg-card border border-border rounded-xl min-w-0 max-w-full flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 bg-secondary/30 border-b border-border shrink-0 rounded-none">
           <span className="text-sm font-medium text-foreground">Generated SQL</span>
           <Button
             variant="ghost"
             size="sm"
             onClick={copyToClipboard}
-            className="h-8 gap-2 text-muted-foreground hover:text-foreground"
+            className="h-8 gap-2 text-muted-foreground hover:text-foreground shrink-0"
           >
             {copied ? (
               <>
@@ -68,8 +68,8 @@ const QueryResult = ({
           </Button>
         </div>
         
-        <div className="p-4">
-          <pre className="code-block p-4 text-sm font-mono overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-hidden min-w-0 rounded-none">
+          <pre className="code-block !rounded-none !border-0 p-4 pr-6 pb-4 text-sm font-mono whitespace-pre w-max min-w-full">
             <code dangerouslySetInnerHTML={{ __html: highlightQuery(query) }} />
           </pre>
         </div>

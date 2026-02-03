@@ -1,6 +1,7 @@
 import { User, Bot, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import QueryResult from "./QueryResult";
+import TableAgent from "./TableAgent";
 
 export interface ChatMessage {
   id: string;
@@ -10,17 +11,29 @@ export interface ChatMessage {
   query?: string;
   explanation?: string;
   optimizations?: string[];
+  tableAgent?: { suggestedTables: string[] };
 }
 
 interface ChatHistoryProps {
   messages: ChatMessage[];
   isLoading?: boolean;
+  isSuggestingTables?: boolean;
+  tableDescriptions?: Record<string, string>;
+  onTableConfirm?: (messageId: string, selectedTables: string[]) => void;
 }
 
-const ChatHistory = ({ messages, isLoading }: ChatHistoryProps) => {
-  if (messages.length === 0 && !isLoading) {
+const ChatHistory = ({
+  messages,
+  isLoading,
+  isSuggestingTables,
+  tableDescriptions = {},
+  onTableConfirm,
+}: ChatHistoryProps) => {
+  if (messages.length === 0 && !isLoading && !isSuggestingTables) {
     return null;
   }
+
+  const allTableNames = Object.keys(tableDescriptions);
 
   return (
     <div className="space-y-6">
@@ -51,7 +64,7 @@ const ChatHistory = ({ messages, isLoading }: ChatHistoryProps) => {
           {/* Content */}
           <div
             className={cn(
-              "flex-1 space-y-3",
+              "flex-1 min-w-0 space-y-3 max-w-full",
               message.type === "user" ? "text-right" : ""
             )}
           >
@@ -71,7 +84,7 @@ const ChatHistory = ({ messages, isLoading }: ChatHistoryProps) => {
                 <p className="text-foreground">{message.content}</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 min-w-0 max-w-full overflow-hidden">
                 {message.content && (
                   <div className="text-foreground space-y-2">
                     {message.content.split(/\n\n+/).map((block, i) => (
@@ -95,6 +108,15 @@ const ChatHistory = ({ messages, isLoading }: ChatHistoryProps) => {
                     ))}
                   </div>
                 )}
+                {message.tableAgent && onTableConfirm && (
+                  <TableAgent
+                    suggestedTables={message.tableAgent.suggestedTables}
+                    allTableNames={allTableNames}
+                    tableDescriptions={tableDescriptions}
+                    onConfirm={(selected) => onTableConfirm(message.id, selected)}
+                    disabled={isLoading}
+                  />
+                )}
                 {message.query && (
                   <QueryResult
                     query={message.query}
@@ -108,7 +130,26 @@ const ChatHistory = ({ messages, isLoading }: ChatHistoryProps) => {
         </div>
       ))}
 
-      {/* Loading State */}
+      {/* Loading: suggesting tables */}
+      {isSuggestingTables && (
+        <div className="flex gap-4">
+          <div className="w-8 h-8 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0">
+            <Bot className="w-4 h-4" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+              <span>SalesCode QueryGPT</span>
+              <span>Suggesting tables…</span>
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading: generating SQL */}
       {isLoading && (
         <div className="flex gap-4">
           <div className="w-8 h-8 rounded-lg bg-accent text-accent-foreground flex items-center justify-center shrink-0">

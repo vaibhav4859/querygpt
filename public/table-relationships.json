@@ -1,0 +1,81 @@
+{
+  "relationships": [
+    {
+      "fromTable": "ck_order_details",
+      "fromColumn": "order_id",
+      "toTable": "ck_orders",
+      "toColumn": "id",
+      "description": "Order line belongs to order header"
+    },
+    {
+      "fromTable": "ck_sales_details",
+      "fromColumn": "sale_id",
+      "toTable": "ck_sales",
+      "toColumn": "id",
+      "description": "Sales line belongs to sales/invoice header"
+    },
+    {
+      "fromTable": "ck_sales",
+      "fromColumn": "outletcode",
+      "toTable": "ck_outlet_details",
+      "toColumn": "outletcode",
+      "description": "Sale at outlet"
+    },
+    {
+      "fromTable": "ck_sales",
+      "fromColumn": "loginid",
+      "toTable": "ck_user",
+      "toColumn": "loginid",
+      "description": "Salesperson who made the sale"
+    },
+    {
+      "fromTable": "ck_sales",
+      "fromColumn": "order_number",
+      "toTable": "ck_orders",
+      "toColumn": "order_number",
+      "description": "Sale linked to order (when converted from order)"
+    },
+    {
+      "fromTable": "ck_orders",
+      "fromColumn": "outletcode",
+      "toTable": "ck_outlet_details",
+      "toColumn": "outletcode",
+      "description": "Order placed at outlet"
+    },
+    {
+      "fromTable": "ck_orders",
+      "fromColumn": "loginid",
+      "toTable": "ck_user",
+      "toColumn": "loginid",
+      "description": "User who placed the order"
+    },
+    {
+      "fromTable": "ck_order_details",
+      "fromColumn": "skucode",
+      "toTable": "ck_productdetails",
+      "toColumn": "sku_code",
+      "description": "Order line product/SKU"
+    },
+    {
+      "fromTable": "ck_sales_details",
+      "fromColumn": "skucode",
+      "toTable": "ck_productdetails",
+      "toColumn": "sku_code",
+      "description": "Sales line product/SKU"
+    },
+    {
+      "fromTable": "ck_sales_details",
+      "fromColumn": "outletcode",
+      "toTable": "ck_outlet_details",
+      "toColumn": "outletcode",
+      "description": "Sales line outlet"
+    },
+    {
+      "fromTable": "ck_sales_details",
+      "fromColumn": "order_number",
+      "toTable": "ck_sales",
+      "toColumn": "order_number",
+      "description": "Sales detail order reference"
+    }
+  ]
+}
