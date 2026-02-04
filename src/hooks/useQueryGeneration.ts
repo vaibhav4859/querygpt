@@ -21,10 +21,8 @@ export interface JiraContextForPrompt {
   project?: string;
 }
 
-function getApiBase(): string {
-  const base = import.meta.env.VITE_QUERYGPT_BACKEND_URL;
-  return typeof base === 'string' && base.trim() ? base.trim().replace(/\/$/, '') : 'https://querygpt-backend.vercel.app';
-}
+import { getApiBase } from '@/lib/api';
+
 const API_BASE = getApiBase();
 const CHAT_URL = `${API_BASE}/api/chat`;
 const CHAT_END_URL = `${API_BASE}/api/chat/end`;

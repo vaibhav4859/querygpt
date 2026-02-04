@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getApiBase } from "@/lib/api";
 
 export interface JiraIssueListItem {
   key: string;
@@ -28,7 +29,7 @@ export function extractJiraKey(input: string): string | null {
   return null;
 }
 
-const API_BASE = "https://querygpt-backend.vercel.app";
+const API_BASE = getApiBase();
 
 export function useJira() {
   const [isLoadingList, setIsLoadingList] = useState(false);
