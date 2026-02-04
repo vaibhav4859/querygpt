@@ -73,6 +73,26 @@ function parseTableNames(
   return names;
 }
 
+/** Extract a short, user-friendly message from API error response */
+function getApiErrorMessage(response: Response, errData: unknown): string {
+  if (response.status === 429) {
+    return 'Rate limit exceeded. Please try again in a moment.';
+  }
+  if (response.status >= 500) {
+    return 'Service temporarily unavailable. Please try again later.';
+  }
+  if (errData && typeof errData === 'object') {
+    const obj = errData as Record<string, unknown>;
+    const msg = obj?.message ?? obj?.error;
+    if (typeof msg === 'string' && msg.length < 200) return msg;
+    if (msg && typeof msg === 'object' && typeof (msg as Record<string, unknown>).message === 'string') {
+      return (msg as Record<string, unknown>).message as string;
+    }
+  }
+  if (typeof errData === 'string' && errData.length < 200) return errData;
+  return 'Something went wrong. Please try again later.';
+}
+
 /** Fallback: suggest tables by matching query words against table descriptions */
 function fallbackSuggestTables(
   naturalQuery: string,
@@ -277,29 +297,26 @@ export function useQueryGeneration() {
         body: JSON.stringify({ message }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const raw =
-          typeof data?.reply === 'string'
-            ? data.reply
-            : typeof data?.message === 'string'
-              ? data.message
-              : typeof data?.response === 'string'
-                ? data.response
-                : typeof data?.text === 'string'
-                  ? data.text
-                  : typeof data?.content === 'string'
-                    ? data.content
-                    : typeof data === 'string'
-                      ? data
-                      : '';
-        const validNames = new Set(Object.keys(tableDescriptions));
-        const names = parseTableNames(raw, validNames);
-        if (names.length > 0) return names;
+      if (!response.ok) {
+        let errData: unknown;
+        try {
+          errData = await response.json();
+        } catch {
+          errData = await response.text();
+        }
+        const body = errData && typeof errData === 'object' ? (errData as Record<string, unknown>) : {};
+        throw new Error(getApiErrorMessage(response, body?.error ?? body?.message ?? errData));
       }
+
+      const data = await response.json();
+      const raw = typeof data?.reply === 'string' ? data.reply : '';
+      const validNames = new Set(Object.keys(tableDescriptions));
+      const names = parseTableNames(raw, validNames);
+      if (names.length > 0) return names;
       return fallbackSuggestTables(naturalQuery, tableDescriptions);
-    } catch {
-      return fallbackSuggestTables(naturalQuery, tableDescriptions);
+    } catch (err) {
+      if (err instanceof Error) throw err;
+      throw new Error('Failed to suggest tables');
     } finally {
       setIsSuggestingTables(false);
     }
@@ -348,27 +365,21 @@ export function useQueryGeneration() {
       });
 
       if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
+        let errData: unknown;
+        try {
+          errData = await response.json();
+        } catch {
+          errData = await response.text();
+        }
+        const body = errData && typeof errData === 'object' ? (errData as Record<string, unknown>) : {};
+        throw new Error(getApiErrorMessage(response, body?.error ?? body?.message ?? errData));
       }
 
       const data = await response.json();
       const newSessionId = typeof data?.sessionId === 'string' ? data.sessionId : null;
       if (newSessionId) setSessionId(newSessionId);
 
-      const raw =
-        typeof data?.reply === 'string'
-          ? data.reply
-          : typeof data?.message === 'string'
-            ? data.message
-            : typeof data?.response === 'string'
-              ? data.response
-              : typeof data?.text === 'string'
-                ? data.text
-                : typeof data?.content === 'string'
-                  ? data.content
-                  : typeof data === 'string'
-                    ? data
-                    : '';
+      const raw = typeof data?.reply === 'string' ? data.reply : '';
       const parsed = parseSqlResponse(raw);
 
       if (parsed.error && !parsed.query) {
@@ -380,9 +391,10 @@ export function useQueryGeneration() {
       };
     } catch (err) {
       console.error('Query generation failed:', err);
+      const msg = err instanceof Error ? err.message : 'Failed to generate query. Please try again.';
       toast({
         title: 'Error',
-        description: 'Failed to generate query. Please try again.',
+        description: msg,
         variant: 'destructive',
       });
       return null;

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { toast } from "@/hooks/use-toast";
 import { PanelLeftClose, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -122,21 +123,39 @@ const Index = () => {
       return;
     }
 
-    const suggested = await suggestTables(
-      query,
-      selectedTenant,
-      schemaContext.tableDescriptions,
-      selectedJiraIssue
-    );
+    try {
+      const suggested = await suggestTables(
+        query,
+        selectedTenant,
+        schemaContext.tableDescriptions,
+        selectedJiraIssue
+      );
 
-    const assistantMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      type: "assistant",
-      content: "I'm planning to use the tables below to generate the query.",
-      timestamp: new Date(),
-      tableAgent: { suggestedTables: suggested },
-    };
-    setMessages((prev) => [...prev, assistantMessage]);
+      const assistantMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        type: "assistant",
+        content: "I'm planning to use the tables below to generate the query.",
+        timestamp: new Date(),
+        tableAgent: { suggestedTables: suggested },
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to suggest tables. Please try again.";
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          type: "assistant",
+          content: errorMsg,
+          timestamp: new Date(),
+        },
+      ]);
+    }
   };
 
   const handleTableConfirm = async (
@@ -263,6 +282,7 @@ const Index = () => {
               <JiraPanel
                 selectedIssue={selectedJiraIssue}
                 onSelectIssue={setSelectedJiraIssue}
+                contextLocked={!!selectedJiraIssue && (hasActiveSession || isLoading || isSuggestingTables || messages.length > 0)}
               />
               <QueryInput
                 onSubmit={handleSubmit}

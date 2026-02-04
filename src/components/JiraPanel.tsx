@@ -15,9 +15,11 @@ import { useJira, type JiraIssueListItem, type JiraIssueDetail } from "@/hooks/u
 interface JiraPanelProps {
   selectedIssue: JiraIssueDetail | null;
   onSelectIssue: (issue: JiraIssueDetail | null) => void;
+  /** When true, Jira context is locked for the current chat — hide list/key inputs */
+  contextLocked?: boolean;
 }
 
-export default function JiraPanel({ selectedIssue, onSelectIssue }: JiraPanelProps) {
+export default function JiraPanel({ selectedIssue, onSelectIssue, contextLocked = false }: JiraPanelProps) {
   const { isAuthenticated, user } = useAuth();
   const {
     listMyIssues,
@@ -64,6 +66,7 @@ export default function JiraPanel({ selectedIssue, onSelectIssue }: JiraPanelPro
 
   return (
     <div className="space-y-2">
+      {!contextLocked && (
       <div className="flex flex-wrap items-center gap-2">
         {isAuthenticated && user?.email && (
           <Popover open={listOpen} onOpenChange={setListOpen}>
@@ -159,6 +162,7 @@ export default function JiraPanel({ selectedIssue, onSelectIssue }: JiraPanelPro
           </p>
         )}
       </div>
+      )}
 
       {selectedIssue && (
         <div className="flex items-start gap-2 rounded-lg border border-border bg-primary/5 p-3">
@@ -171,16 +175,18 @@ export default function JiraPanel({ selectedIssue, onSelectIssue }: JiraPanelPro
               {selectedIssue.summary ? ` — ${selectedIssue.summary}` : ""}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
-            onClick={handleClearIssue}
-            aria-label="Clear Jira context"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+          {!contextLocked && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
+              onClick={handleClearIssue}
+              aria-label="Clear Jira context"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       )}
 
