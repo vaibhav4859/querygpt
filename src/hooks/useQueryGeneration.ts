@@ -1,6 +1,17 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { format } from 'sql-formatter';
 import { toast } from '@/hooks/use-toast';
 import type { TableSchema } from '@/data/schema';
+
+/** Format SQL for readability; return original on parse error */
+function formatSql(sql: string): string {
+  try {
+    const formatted = format(sql, { language: 'mysql', keywordCase: 'upper' });
+    return formatted.trim();
+  } catch {
+    return sql;
+  }
+}
 
 export interface JiraContextForPrompt {
   key: string;
@@ -10,8 +21,13 @@ export interface JiraContextForPrompt {
   project?: string;
 }
 
-const API_BASE = 'https://querygpt-backend.vercel.app';
+function getApiBase(): string {
+  const base = import.meta.env.VITE_QUERYGPT_BACKEND_URL;
+  return typeof base === 'string' && base.trim() ? base.trim().replace(/\/$/, '') : 'https://querygpt-backend.vercel.app';
+}
+const API_BASE = getApiBase();
 const CHAT_URL = `${API_BASE}/api/chat`;
+const CHAT_END_URL = `${API_BASE}/api/chat/end`;
 
 const SQL_SYSTEM_PROMPT = `You are SalesCode QueryGPT. SalesCode QueryGPT ONLY helps with SQL query generation, optimization, and database-related questions. Rules:
 - When the user asks something NOT related to SQL (e.g. math, general knowledge, other topics), reply briefly: "SalesCode QueryGPT only supports SQL query generation and optimization." Do not use "I" — always refer to yourself as SalesCode QueryGPT.
@@ -28,9 +44,9 @@ function parseSqlResponse(text: string): { query?: string; explanation?: string;
   const sqlMatch = normalized.match(/\bsql\s+query\s*:\s*([\s\S]*?)(?=\n\s*explanation\s*:|$)/i);
   const explMatch = normalized.match(/\bexplanation\s*:\s*([\s\S]*)/i);
   if (sqlMatch && explMatch) {
-    const query = sqlMatch[1].trim();
+    const rawQuery = sqlMatch[1].trim();
     const explanation = explMatch[1].trim();
-    if (query) return { query, explanation };
+    if (rawQuery) return { query: formatSql(rawQuery), explanation };
   }
   return { error: text.trim() };
 }
@@ -151,6 +167,28 @@ function buildJiraContextString(jira: JiraContextForPrompt): string {
   return lines.join('\n');
 }
 
+/** Build system instruction for chat session (schema + rules) — sent once per session */
+function buildSystemInstruction(
+  selectedTables: string[],
+  schemaContext: SchemaContext,
+  jiraContext?: JiraContextForPrompt | null
+): string {
+  const schemaBlock = buildSchemaContextString(selectedTables, schemaContext);
+  const jiraBlock = jiraContext ? buildJiraContextString(jiraContext) : '';
+  const parts = [
+    SQL_SYSTEM_PROMPT,
+    '',
+    schemaBlock,
+    '',
+  ];
+  if (jiraBlock) parts.push(jiraBlock);
+  parts.push(
+    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly.' +
+      (jiraContext ? ' Use the Jira context above to align columns, filters, and rules with the report if applicable.' : '')
+  );
+  return parts.join('\n');
+}
+
 function buildSqlMessage(
   userMessage: string,
   tenant: string,
@@ -187,6 +225,18 @@ export interface QueryResult {
 export function useQueryGeneration() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuggestingTables, setIsSuggestingTables] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  const endSession = useCallback(() => {
+    if (sessionId) {
+      fetch(CHAT_END_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      }).catch(() => {});
+      setSessionId(null);
+    }
+  }, [sessionId]);
 
   const suggestTables = async (
     naturalQuery: string,
@@ -264,24 +314,37 @@ export function useQueryGeneration() {
   ): Promise<QueryResult | null> => {
     setIsLoading(true);
     try {
-      const jiraBlock = jiraContext ? buildJiraContextString(jiraContext) : '';
-      const message =
-        selectedTables?.length && schemaContext
-          ? buildSqlMessage(naturalQuery, tenant, selectedTables, schemaContext, jiraContext)
-          : [
-              SQL_SYSTEM_PROMPT,
-              '',
-              jiraBlock,
-              jiraBlock ? '\n' : '',
-              `User (tenant: ${tenant}): ${naturalQuery}`,
-            ].join('');
+      const isFollowUp =
+        sessionId &&
+        (!selectedTables?.length || !schemaContext);
 
-      console.log('[QueryGPT] Prompt sent to chat API (generate SQL):', message);
+      let body: { message: string; sessionId?: string; systemInstruction?: string };
+      if (isFollowUp) {
+        body = { message: naturalQuery, sessionId: sessionId! };
+      } else if (selectedTables?.length && schemaContext) {
+        const systemInstruction = buildSystemInstruction(
+          selectedTables,
+          schemaContext,
+          jiraContext
+        );
+        const message = `User (tenant: ${tenant}) question: ${naturalQuery}`;
+        body = { message, systemInstruction };
+      } else {
+        const jiraBlock = jiraContext ? buildJiraContextString(jiraContext) : '';
+        const message = [
+          SQL_SYSTEM_PROMPT,
+          '',
+          jiraBlock,
+          jiraBlock ? '\n' : '',
+          `User (tenant: ${tenant}): ${naturalQuery}`,
+        ].join('');
+        body = { message };
+      }
 
       const response = await fetch(CHAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -289,6 +352,9 @@ export function useQueryGeneration() {
       }
 
       const data = await response.json();
+      const newSessionId = typeof data?.sessionId === 'string' ? data.sessionId : null;
+      if (newSessionId) setSessionId(newSessionId);
+
       const raw =
         typeof data?.reply === 'string'
           ? data.reply
@@ -328,6 +394,8 @@ export function useQueryGeneration() {
   return {
     suggestTables,
     generateQuery,
+    endSession,
+    hasActiveSession: !!sessionId,
     isLoading,
     isSuggestingTables,
   };

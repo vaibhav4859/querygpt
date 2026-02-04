@@ -6,19 +6,22 @@ import { cn } from "@/lib/utils";
 
 interface TableAgentProps {
   suggestedTables: string[];
+  confirmedTables?: string[];
   allTableNames: string[];
   tableDescriptions: Record<string, string>;
-  onConfirm: (selectedTables: string[]) => void;
+  onConfirm?: (selectedTables: string[]) => void;
   disabled?: boolean;
 }
 
 export default function TableAgent({
   suggestedTables,
+  confirmedTables,
   allTableNames,
   tableDescriptions,
   onConfirm,
   disabled = false,
 }: TableAgentProps) {
+  const isConfirmed = confirmedTables != null && confirmedTables.length > 0;
   const [selected, setSelected] = useState<string[]>(() => suggestedTables);
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
@@ -71,6 +74,28 @@ export default function TableAgent({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (isConfirmed) {
+    return (
+      <div className="rounded-xl border border-border bg-card/50 shadow-sm overflow-hidden">
+        <p className="text-sm text-muted-foreground px-4 pt-4 pb-2">
+          Tables used for this query:
+        </p>
+        <div className="px-4 pb-4">
+          <div className="flex flex-wrap gap-2">
+            {confirmedTables!.map((table) => (
+              <span
+                key={table}
+                className="inline-flex items-center rounded-md bg-muted px-2.5 py-1.5 text-sm font-medium text-foreground border border-border"
+              >
+                {table}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-border bg-card/50 shadow-sm overflow-hidden">

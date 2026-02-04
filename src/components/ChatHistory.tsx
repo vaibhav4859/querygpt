@@ -11,7 +11,7 @@ export interface ChatMessage {
   query?: string;
   explanation?: string;
   optimizations?: string[];
-  tableAgent?: { suggestedTables: string[] };
+  tableAgent?: { suggestedTables: string[]; confirmedTables?: string[] };
 }
 
 interface ChatHistoryProps {
@@ -108,12 +108,13 @@ const ChatHistory = ({
                     ))}
                   </div>
                 )}
-                {message.tableAgent && onTableConfirm && (
+                {message.tableAgent && (
                   <TableAgent
                     suggestedTables={message.tableAgent.suggestedTables}
+                    confirmedTables={message.tableAgent.confirmedTables}
                     allTableNames={allTableNames}
                     tableDescriptions={tableDescriptions}
-                    onConfirm={(selected) => onTableConfirm(message.id, selected)}
+                    onConfirm={onTableConfirm ? (selected) => onTableConfirm(message.id, selected) : undefined}
                     disabled={isLoading}
                   />
                 )}

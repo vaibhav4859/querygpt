@@ -32,9 +32,21 @@ const Index = () => {
   const {
     suggestTables,
     generateQuery,
+    endSession,
+    hasActiveSession,
     isLoading,
     isSuggestingTables,
   } = useQueryGeneration();
+
+  useEffect(() => {
+    return () => {
+      endSession();
+    };
+  }, [endSession]);
+
+  useEffect(() => {
+    endSession();
+  }, [selectedTenant]);
 
   useEffect(() => {
     Promise.all([
@@ -93,6 +105,23 @@ const Index = () => {
       return;
     }
 
+    if (hasActiveSession) {
+      const result = await generateQuery(query, selectedTenant);
+      if (result) {
+        const sqlMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          type: "assistant",
+          timestamp: new Date(),
+          content: result.error ? result.error : "Here's your optimized SQL query:",
+          query: result.error ? undefined : result.query,
+          explanation: result.explanation,
+          optimizations: result.optimizations,
+        };
+        setMessages((prev) => [...prev, sqlMessage]);
+      }
+      return;
+    }
+
     const suggested = await suggestTables(
       query,
       selectedTenant,
@@ -122,7 +151,9 @@ const Index = () => {
 
     setMessages((prev) =>
       prev.map((m) =>
-        m.id === messageId ? { ...m, tableAgent: undefined } : m
+        m.id === messageId && m.tableAgent
+          ? { ...m, tableAgent: { ...m.tableAgent, confirmedTables: selectedTables } }
+          : m
       )
     );
 
@@ -167,7 +198,11 @@ const Index = () => {
         selectedTenant={selectedTenant}
         onTenantChange={setSelectedTenant}
         onHistoryClick={handleHistoryClick}
-        onLogoClick={() => setMessages([])}
+        onLogoClick={() => {
+          endSession();
+          setMessages([]);
+          setSelectedJiraIssue(null);
+        }}
       />
 
       <div className="flex-1 flex overflow-hidden">
