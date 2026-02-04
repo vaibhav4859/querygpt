@@ -2,6 +2,14 @@ import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import type { TableSchema } from '@/data/schema';
 
+export interface JiraContextForPrompt {
+  key: string;
+  summary: string;
+  description: string;
+  status?: string;
+  project?: string;
+}
+
 const API_BASE = 'https://querygpt-backend.vercel.app';
 const CHAT_URL = `${API_BASE}/api/chat`;
 
@@ -129,22 +137,43 @@ function buildSchemaContextString(
   return lines.join('\n');
 }
 
+function buildJiraContextString(jira: JiraContextForPrompt): string {
+  const lines: string[] = [
+    'Jira issue context (use for report columns, filters, and business rules if relevant):',
+    '',
+    `Key: ${jira.key}`,
+    `Summary: ${jira.summary}`,
+  ];
+  if (jira.description?.trim()) {
+    lines.push(`Description: ${jira.description.trim()}`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
 function buildSqlMessage(
   userMessage: string,
   tenant: string,
   selectedTables: string[],
-  schemaContext: SchemaContext
+  schemaContext: SchemaContext,
+  jiraContext?: JiraContextForPrompt | null
 ): string {
   const schemaBlock = buildSchemaContextString(selectedTables, schemaContext);
-  return [
+  const jiraBlock = jiraContext ? buildJiraContextString(jiraContext) : '';
+  const parts = [
     SQL_SYSTEM_PROMPT,
     '',
     schemaBlock,
     '',
+  ];
+  if (jiraBlock) parts.push(jiraBlock);
+  parts.push(
     `User (tenant: ${tenant}) question: ${userMessage}`,
     '',
-    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly.',
-  ].join('\n');
+    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly.' +
+      (jiraContext ? ' Use the Jira context above to align columns, filters, and rules with the report if applicable.' : '')
+  );
+  return parts.join('\n');
 }
 
 export interface QueryResult {
@@ -162,20 +191,35 @@ export function useQueryGeneration() {
   const suggestTables = async (
     naturalQuery: string,
     tenant: string,
-    tableDescriptions: Record<string, string>
+    tableDescriptions: Record<string, string>,
+    jiraContext?: JiraContextForPrompt | null
   ): Promise<string[]> => {
     setIsSuggestingTables(true);
     try {
+      const jiraBlock = jiraContext
+        ? [
+            '',
+            'Jira context (use to pick relevant tables for this report):',
+            `Key: ${jiraContext.key}`,
+            `Summary: ${jiraContext.summary}`,
+            jiraContext.description?.trim()
+              ? `Description: ${jiraContext.description.trim()}`
+              : '',
+            '',
+          ].join('\n')
+        : '';
       const message = [
         TABLE_SUGGEST_PROMPT,
         '',
         'Tables and descriptions (use only these exact names):',
         JSON.stringify(tableDescriptions),
-        '',
+        jiraBlock,
         `User (tenant: ${tenant}) question: ${naturalQuery}`,
         '',
         'Respond with ONLY a comma-separated list of table names, nothing else.',
       ].join('\n');
+
+      console.log('[QueryGPT] Prompt sent to chat API (suggest tables):', message);
 
       const response = await fetch(CHAT_URL, {
         method: 'POST',
@@ -215,14 +259,24 @@ export function useQueryGeneration() {
     naturalQuery: string,
     tenant: string,
     selectedTables?: string[],
-    schemaContext?: SchemaContext
+    schemaContext?: SchemaContext,
+    jiraContext?: JiraContextForPrompt | null
   ): Promise<QueryResult | null> => {
     setIsLoading(true);
     try {
+      const jiraBlock = jiraContext ? buildJiraContextString(jiraContext) : '';
       const message =
         selectedTables?.length && schemaContext
-          ? buildSqlMessage(naturalQuery, tenant, selectedTables, schemaContext)
-          : `${SQL_SYSTEM_PROMPT}\n\nUser (tenant: ${tenant}): ${naturalQuery}`;
+          ? buildSqlMessage(naturalQuery, tenant, selectedTables, schemaContext, jiraContext)
+          : [
+              SQL_SYSTEM_PROMPT,
+              '',
+              jiraBlock,
+              jiraBlock ? '\n' : '',
+              `User (tenant: ${tenant}): ${naturalQuery}`,
+            ].join('');
+
+      console.log('[QueryGPT] Prompt sent to chat API (generate SQL):', message);
 
       const response = await fetch(CHAT_URL, {
         method: 'POST',

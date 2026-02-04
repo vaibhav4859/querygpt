@@ -15,8 +15,8 @@
   "ck_sales_history": "Sales history – status/transaction history for sales",
   "ck_user": "Users – user accounts, login, hierarchy",
   "ck_userdesignation": "User designations – user-to-designation mapping",
-  "dms_loadout": "Loadout (distribution) – load-out header (quantities, vehicle, dates)",
-  "dms_loadout_details": "Loadout details – per-outlet/invoice load-out lines",
-  "dms_loadout_items": "Loadout line items – per-SKU quantities in load-out",
+  "dms_loadout": "DMS loadout header – load-out number, status/type/source, vehicle, created/delivery/settlement timestamps, and total quantities/amounts",
+  "dms_loadout_details": "DMS loadout details – invoices mapped to a loadout (invoice_number), plus outlet/route/preseller and totals per invoice",
+  "dms_loadout_items": "DMS loadout items – per-SKU quantities/amounts inside a loadout detail (invoice) including batch_id/batch_code and item_type (NORMAL/FREE)",
   "profile": "Profiles – config/profile records (attributes, payload, type)"
 }

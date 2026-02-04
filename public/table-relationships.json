@@ -76,6 +76,41 @@
       "toTable": "ck_sales",
       "toColumn": "order_number",
       "description": "Sales detail order reference"
+    },
+    {
+      "fromTable": "dms_loadout_details",
+      "fromColumn": "load_number",
+      "toTable": "dms_loadout",
+      "toColumn": "load_number",
+      "description": "Loadout detail belongs to loadout header (by load_number)"
+    },
+    {
+      "fromTable": "dms_loadout_items",
+      "fromColumn": "load_out_details_id",
+      "toTable": "dms_loadout_details",
+      "toColumn": "id",
+      "description": "Loadout item belongs to a loadout detail (invoice) row"
+    },
+    {
+      "fromTable": "dms_loadout_details",
+      "fromColumn": "outlet_code",
+      "toTable": "ck_outlet_details",
+      "toColumn": "outletcode",
+      "description": "Loadout detail outlet mapping (outlet_code ↔ outletcode)"
+    },
+    {
+      "fromTable": "dms_loadout_items",
+      "fromColumn": "sku_code",
+      "toTable": "ck_productdetails",
+      "toColumn": "sku_code",
+      "description": "Loadout item SKU mapping"
+    },
+    {
+      "fromTable": "dms_loadout_details",
+      "fromColumn": "invoice_number",
+      "toTable": "ck_sales",
+      "toColumn": "invoice_number",
+      "description": "Loadout detail invoice number mapping to sales header (if the tenant uses ck_sales as invoice master)"
     }
   ]
 }

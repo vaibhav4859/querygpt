@@ -8,8 +8,10 @@ import QueryInput from "@/components/QueryInput";
 import ChatHistory, { ChatMessage } from "@/components/ChatHistory";
 import ExampleQueries from "@/components/ExampleQueries";
 import HistoryPanel from "@/components/HistoryPanel";
+import JiraPanel from "@/components/JiraPanel";
 import { useQueryGeneration } from "@/hooks/useQueryGeneration";
 import { useAuth } from "@/hooks/useAuth";
+import type { JiraIssueDetail } from "@/hooks/useJira";
 import { loadSchema } from "@/data/schema";
 import type { TableSchema } from "@/data/schema";
 import type { SchemaContext } from "@/hooks/useQueryGeneration";
@@ -24,6 +26,7 @@ const Index = () => {
   const [selectedTenant, setSelectedTenant] = useState("lbpl");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [schemaContext, setSchemaContext] = useState<SchemaContext | null>(null);
+  const [selectedJiraIssue, setSelectedJiraIssue] = useState<JiraIssueDetail | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated } = useAuth();
   const {
@@ -93,7 +96,8 @@ const Index = () => {
     const suggested = await suggestTables(
       query,
       selectedTenant,
-      schemaContext.tableDescriptions
+      schemaContext.tableDescriptions,
+      selectedJiraIssue
     );
 
     const assistantMessage: ChatMessage = {
@@ -128,7 +132,8 @@ const Index = () => {
       naturalQuery,
       selectedTenant,
       selectedTables,
-      schemaContext
+      schemaContext,
+      selectedJiraIssue
     );
 
     if (result) {
@@ -219,10 +224,19 @@ const Index = () => {
           </ScrollArea>
 
           <div className="border-t border-border px-6 py-6 pl-6 pr-8 shrink-0">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto space-y-3">
+              <JiraPanel
+                selectedIssue={selectedJiraIssue}
+                onSelectIssue={setSelectedJiraIssue}
+              />
               <QueryInput
                 onSubmit={handleSubmit}
                 isLoading={isLoading || isSuggestingTables}
+                placeholder={
+                  selectedJiraIssue
+                    ? "Ask for SQL using the Jira report above (e.g. generate the report query)"
+                    : undefined
+                }
               />
             </div>
           </div>
