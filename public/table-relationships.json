@@ -1,4 +1,57 @@
 {
+  "columnToTableMappings": [
+    {
+      "fromColumns": [
+        "hierarchy"
+      ],
+      "toTable": "ck_hierarchy_metadata",
+      "toColumn": "hierarchy",
+      "description": "Join for hierarchy metadata when a table has hierarchy column"
+    },
+    {
+      "fromColumns": [
+        "location_hierarchy"
+      ],
+      "toTable": "ck_location",
+      "toColumn": "location_hierarchy",
+      "description": "Join for location when a table has location_hierarchy column"
+    },
+    {
+      "fromColumns": [
+        "loginid",
+        "login_id"
+      ],
+      "toTable": "ck_user",
+      "toColumn": "loginid",
+      "description": "Join for user when a table has loginid or login_id column"
+    },
+    {
+      "fromColumns": [
+        "outletcode",
+        "outlet_code"
+      ],
+      "toTable": "ck_outlet_details",
+      "toColumn": "outletcode",
+      "description": "Join for outlet when a table has outletcode or outlet_code column"
+    },
+    {
+      "fromColumns": [
+        "batch_code"
+      ],
+      "toTable": "ck_productdetails",
+      "toColumn": "batch_code",
+      "description": "Join for product batch when a table has batch_code column"
+    },
+    {
+      "fromColumns": [
+        "sku_code",
+        "skucode"
+      ],
+      "toTable": "ck_productdetails",
+      "toColumn": "sku_code",
+      "description": "Join for product/SKU when a table has sku_code or skucode column"
+    }
+  ],
   "relationships": [
     {
       "fromTable": "ck_analytics",

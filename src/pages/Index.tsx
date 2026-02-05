@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import type { JiraIssueDetail } from "@/hooks/useJira";
 import { loadSchema } from "@/data/schema";
 import type { TableSchema } from "@/data/schema";
-import type { SchemaContext } from "@/hooks/useQueryGeneration";
+import type { SchemaContext, ColumnDescriptionEntry, ColumnToTableMapping } from "@/hooks/useQueryGeneration";
 
 const TABLE_DESCRIPTIONS_URL = "/table-descriptions.json";
 const COLUMN_DESCRIPTIONS_URL = "/column-descriptions.json";
@@ -55,19 +55,22 @@ const Index = () => {
       fetch(COLUMN_DESCRIPTIONS_URL).then((r) => r.json()),
       fetch(TABLE_RELATIONSHIPS_URL)
         .then((r) => r.json())
-        .then((data: { relationships?: SchemaContext["relationships"] }) => data.relationships ?? [])
-        .catch(() => [] as SchemaContext["relationships"]),
+        .then((data: { relationships?: SchemaContext["relationships"]; columnToTableMappings?: ColumnToTableMapping[] }) => ({
+          relationships: data.relationships ?? [],
+          columnToTableMappings: data.columnToTableMappings ?? [],
+        }))
+        .catch(() => ({ relationships: [] as SchemaContext["relationships"], columnToTableMappings: [] as ColumnToTableMapping[] })),
       loadSchema(),
     ]).then(
       ([
         tableDescriptions,
         columnDescriptions,
-        relationships,
+        { relationships, columnToTableMappings },
         schema,
       ]: [
         Record<string, string>,
-        Record<string, Record<string, string>>,
-        SchemaContext["relationships"],
+        Record<string, Record<string, ColumnDescriptionEntry>>,
+        { relationships: SchemaContext["relationships"]; columnToTableMappings: ColumnToTableMapping[] },
         TableSchema[],
       ]) => {
         setSchemaContext({
@@ -75,6 +78,7 @@ const Index = () => {
           columnDescriptions,
           schema,
           relationships,
+          columnToTableMappings,
         });
       }
     );

@@ -122,11 +122,34 @@ export interface TableRelationship {
   description?: string;
 }
 
+/** Common column-to-table join rule: when any table has one of fromColumns, join to toTable.toColumn for more info */
+export interface ColumnToTableMapping {
+  fromColumns: string[];
+  toTable: string;
+  toColumn: string;
+  description?: string;
+}
+
+/** Column description: plain string or object with description + optional example (e.g. for JSON columns) */
+export type ColumnDescriptionEntry =
+  | string
+  | { description: string; example?: string };
+
 export interface SchemaContext {
   tableDescriptions: Record<string, string>;
-  columnDescriptions: Record<string, Record<string, string>>;
+  columnDescriptions: Record<string, Record<string, ColumnDescriptionEntry>>;
   schema: TableSchema[];
   relationships: TableRelationship[];
+  columnToTableMappings?: ColumnToTableMapping[];
+}
+
+/** Format column description for prompt: description + optional example. */
+function formatColumnDesc(entry: ColumnDescriptionEntry | undefined): string {
+  if (entry == null) return '';
+  if (typeof entry === 'string') return entry;
+  const { description, example } = entry;
+  if (!description) return '';
+  return example ? `${description} Example: ${example}` : description;
 }
 
 function buildSchemaContextString(
@@ -149,7 +172,8 @@ function buildSchemaContextString(
     for (const col of columns) {
       const key = col.isPrimary ? ' (PRI)' : '';
       const type = col.type || 'varchar';
-      const descLine = colDesc?.[col.name] ? ` — ${colDesc[col.name]}` : '';
+      const descText = formatColumnDesc(colDesc?.[col.name]);
+      const descLine = descText ? ` — ${descText}` : '';
       lines.push(`    - ${col.name} (${type}${key})${descLine}`);
     }
     lines.push('');
@@ -167,6 +191,29 @@ function buildSchemaContextString(
       lines.push(`  ${r.fromTable}.${r.fromColumn} -> ${r.toTable}.${r.toColumn}${desc}`);
     }
     lines.push('');
+  }
+  const mappings = ctx.columnToTableMappings ?? [];
+  if (mappings.length > 0) {
+    const selectedColumnSet = new Set<string>();
+    for (const tableName of selectedTables) {
+      const tableSchema = ctx.schema.find((t) => t.name === tableName);
+      for (const col of tableSchema?.fields ?? []) {
+        selectedColumnSet.add(col.name.toLowerCase());
+      }
+    }
+    const applicableMappings = mappings.filter((m) =>
+      m.fromColumns.some((c) => selectedColumnSet.has(c.toLowerCase()))
+    );
+    if (applicableMappings.length > 0) {
+      lines.push('Common column joins (if a table has any of these column names, join to the corresponding table for more information):');
+      lines.push('');
+      for (const m of applicableMappings) {
+        const cols = m.fromColumns.join(', ');
+        const desc = m.description ? ` — ${m.description}` : '';
+        lines.push(`  Column(s): ${cols} -> ${m.toTable}.${m.toColumn}${desc}`);
+      }
+      lines.push('');
+    }
   }
   return lines.join('\n');
 }
