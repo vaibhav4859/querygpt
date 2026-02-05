@@ -120,6 +120,7 @@ const Index = () => {
           content: result.error ? result.error : "Here's your optimized SQL query:",
           query: result.error ? undefined : result.query,
           explanation: result.explanation,
+          suggestedIndexes: result.suggestedIndexes,
           optimizations: result.optimizations,
         };
         setMessages((prev) => [...prev, sqlMessage]);
@@ -200,6 +201,7 @@ const Index = () => {
           : "Here's your optimized SQL query:",
         query: result.error ? undefined : result.query,
         explanation: result.explanation,
+        suggestedIndexes: result.suggestedIndexes,
         optimizations: result.optimizations,
       };
       setMessages((prev) => [...prev, sqlMessage]);

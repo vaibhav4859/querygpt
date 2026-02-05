@@ -1,21 +1,24 @@
 import { useState } from "react";
-import { Copy, Check, ChevronDown, ChevronUp, Shield } from "lucide-react";
+import { Copy, Check, ChevronDown, ChevronUp, Shield, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface QueryResultProps {
   query: string;
   explanation?: string;
+  suggestedIndexes?: string[];
   optimizations?: string[];
 }
 
 const QueryResult = ({
   query,
   explanation,
+  suggestedIndexes = [],
   optimizations = [],
 }: QueryResultProps) => {
   const [copied, setCopied] = useState(false);
   const [showExplanation, setShowExplanation] = useState(true);
+  const [showIndexes, setShowIndexes] = useState(true);
 
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(query);
@@ -97,6 +100,39 @@ const QueryResult = ({
             <div className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed">
               {explanation}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Suggested indexes */}
+      {suggestedIndexes.length > 0 && (
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <button
+            onClick={() => setShowIndexes(!showIndexes)}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/20 transition-colors"
+          >
+            <span className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Database className="w-4 h-4 text-primary" />
+              Suggested indexes (to run this query faster)
+            </span>
+            {showIndexes ? (
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            )}
+          </button>
+          <div className={cn(
+            "overflow-hidden transition-all duration-300",
+            showIndexes ? "max-h-96" : "max-h-0"
+          )}>
+            <ul className="px-4 pb-4 space-y-2">
+              {suggestedIndexes.map((idx, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground font-mono">
+                  <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <span className="break-all">{idx}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}

@@ -32,20 +32,47 @@ const SQL_SYSTEM_PROMPT = `You are SalesCode QueryGPT. SalesCode QueryGPT ONLY h
 - When the user asks for a SQL query, reply ONLY in this exact format with no other text, markdown, or headers:
 sql query: <your SQL here>
 explanation: <brief explanation of what the query does>
-Do not include any third field or extra content.
-- For any dynamic parameter the query needs (e.g. date range, user id, outlet code, filters that the user will supply at runtime), use placeholders in the form \${parameterName}. Examples: \${fromDate}, \${toDate}, \${outletCode}, \${loginid}. Use clear, camelCase names inside the braces. Example: WHERE creation_time >= '\${fromDate}' AND creation_time <= '\${toDate}'.`;
+suggested indexes: <one index suggestion per line, only indexes that would actually speed up this specific query>
+Do not include any fourth field or extra content.
+- For any dynamic parameter the query needs (e.g. date range, user id, outlet code, filters that the user will supply at runtime), use placeholders in the form \${parameterName}. Examples: \${fromDate}, \${toDate}, \${outletCode}, \${loginid}. Use clear, camelCase names inside the braces. Example: WHERE creation_time >= '\${fromDate}' AND creation_time <= '\${toDate}'.
+- For suggested indexes: (1) Look at the tables and columns provided in the schema — suggest only indexes on tables and columns that actually exist there; do not invent table or column names. (2) Only suggest an index if the query uses that column in WHERE, JOIN ON, ORDER BY, or GROUP BY. (3) Prefer columns that are good for indexing (e.g. IDs, codes, dates used in filters) and avoid suggesting indexes on columns that would not help this query or that are not in the schema. (4) Be specific: use exact table and column names from the schema, e.g. "ck_orders(creation_time, outletcode)" or "CREATE INDEX idx_orders_outlet ON ck_orders(outletcode);". (5) If no index would meaningfully help, or columns are not in the schema, output "None" or one line saying no additional indexes needed.`;
 
 const TABLE_SUGGEST_PROMPT = `You are a database schema expert. Given a natural language question and a list of database tables with descriptions, respond with ONLY a comma-separated list of table names that are relevant to answer the question. Use only the exact table names provided. No other text, explanation, or punctuation. Example: ck_orders,ck_order_details,ck_outlet_details`;
 
-/** Parse API response: extract "sql query:" and "explanation:"; else return raw for out-of-scope */
-function parseSqlResponse(text: string): { query?: string; explanation?: string; error?: string } {
+/** When the query needs these concepts, use the corresponding table (for name, email, details, etc.). */
+const CONCEPT_TO_TABLE_HINTS = [
+  'When the query needs user name, email, login id, mobile, or any user-related information → use ck_user.',
+  'When the query needs outlet name, address, outlet code, or outlet details → use ck_outlet_details.',
+  'When the query needs product name, SKU, batch, or product details → use ck_productdetails.',
+  'Order header (order number, dates, totals) → ck_orders; order line items (quantity, product per order) → ck_order_details.',
+  'Sales/invoice header → ck_sales; sales line items → ck_sales_details.',
+  'Location, region, state, area, or location hierarchy → ck_location.',
+  'Hierarchy path or metadata → ck_hierarchy_metadata.',
+  'Division or channel division → ck_division.',
+];
+
+/** Parse API response: extract "sql query:", "explanation:", and "suggested indexes:"; else return raw for out-of-scope */
+function parseSqlResponse(text: string): {
+  query?: string;
+  explanation?: string;
+  suggestedIndexes?: string[];
+  error?: string;
+} {
   const normalized = text.replace(/\r\n/g, '\n').replace(/^#+\s*/gm, '').trim();
   const sqlMatch = normalized.match(/\bsql\s+query\s*:\s*([\s\S]*?)(?=\n\s*explanation\s*:|$)/i);
-  const explMatch = normalized.match(/\bexplanation\s*:\s*([\s\S]*)/i);
+  const explMatch = normalized.match(/\bexplanation\s*:\s*([\s\S]*?)(?=\n\s*suggested\s+indexes\s*:|$)/i);
+  const indexesMatch = normalized.match(/\bsuggested\s+indexes\s*:\s*([\s\S]*)/i);
   if (sqlMatch && explMatch) {
     const rawQuery = sqlMatch[1].trim();
     const explanation = explMatch[1].trim();
-    if (rawQuery) return { query: formatSql(rawQuery), explanation };
+    let suggestedIndexes: string[] | undefined;
+    if (indexesMatch) {
+      suggestedIndexes = indexesMatch[1]
+        .split('\n')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0 && !/^(none|n\/a|—|--)$/i.test(s));
+    }
+    if (rawQuery) return { query: formatSql(rawQuery), explanation, suggestedIndexes };
   }
   return { error: text.trim() };
 }
@@ -216,6 +243,12 @@ function buildSchemaContextString(
       lines.push('');
     }
   }
+  lines.push('Concept-to-table (use the right table when the query asks for):');
+  lines.push('');
+  for (const hint of CONCEPT_TO_TABLE_HINTS) {
+    lines.push(`  ${hint}`);
+  }
+  lines.push('');
   return lines.join('\n');
 }
 
@@ -249,7 +282,7 @@ function buildSystemInstruction(
   ];
   if (jiraBlock) parts.push(jiraBlock);
   parts.push(
-    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly. For dynamic parameters (e.g. dates, filters), use placeholders like ${fromDate}, ${toDate}.' +
+    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly. For dynamic parameters (e.g. dates, filters), use placeholders like ${fromDate}, ${toDate}. For suggested indexes: use only table and column names that appear in the schema above; verify each column exists in that table before suggesting.' +
       (jiraContext ? ' Use the Jira context above to align columns, filters, and rules with the report if applicable.' : '')
   );
   return parts.join('\n');
@@ -274,7 +307,7 @@ function buildSqlMessage(
   parts.push(
     `User (tenant: ${tenant}) question: ${userMessage}`,
     '',
-    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly. For dynamic parameters (e.g. dates, filters), use placeholders like ${fromDate}, ${toDate}.' +
+    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly. For dynamic parameters (e.g. dates, filters), use placeholders like ${fromDate}, ${toDate}. For suggested indexes: use only table and column names that appear in the schema above; verify each column exists in that table before suggesting.' +
       (jiraContext ? ' Use the Jira context above to align columns, filters, and rules with the report if applicable.' : '')
   );
   return parts.join('\n');
@@ -283,6 +316,7 @@ function buildSqlMessage(
 export interface QueryResult {
   query: string;
   explanation?: string;
+  suggestedIndexes?: string[];
   optimizations?: string[];
   executionTips?: string;
   error?: string;
@@ -434,6 +468,7 @@ export function useQueryGeneration() {
       return {
         query: parsed.query ?? '',
         explanation: parsed.explanation,
+        suggestedIndexes: parsed.suggestedIndexes,
       };
     } catch (err) {
       console.error('Query generation failed:', err);

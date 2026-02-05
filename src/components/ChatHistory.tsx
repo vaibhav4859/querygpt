@@ -10,6 +10,7 @@ export interface ChatMessage {
   timestamp: Date;
   query?: string;
   explanation?: string;
+  suggestedIndexes?: string[];
   optimizations?: string[];
   tableAgent?: { suggestedTables: string[]; confirmedTables?: string[] };
 }
@@ -122,6 +123,7 @@ const ChatHistory = ({
                   <QueryResult
                     query={message.query}
                     explanation={message.explanation}
+                    suggestedIndexes={message.suggestedIndexes}
                     optimizations={message.optimizations}
                   />
                 )}
