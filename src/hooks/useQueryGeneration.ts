@@ -40,15 +40,24 @@ Do not include any fourth field or extra content.
 
 const TABLE_SUGGEST_PROMPT = `You are a database schema expert. Given a natural language question and a list of database tables with descriptions, respond with ONLY a comma-separated list of table names that are relevant to answer the question. Use only the exact table names provided. No other text, explanation, or punctuation. Example: ck_orders,ck_order_details,ck_outlet_details`;
 
-/** Concept → table/column. Shown early so the model uses the right entity table for names and concepts. */
-const CONCEPT_TO_TABLE_HINTS = `Concept → table (use these when the query asks for the following):
-• User / Salesman / Distributor / Supplier (person) name → ck_user.name; join on loginid, salesman_id, supplier, created_by, etc.
-• Outlet / Customer name → ck_outlet_details.outlet_name; join on outletcode / outlet_code.
-• Product name, SKU, batch → ck_productdetails; join on sku_code / skucode, batch_code.
-• Order header (number, dates, totals) → ck_orders; order lines → ck_order_details.
-• Sales / invoice header → ck_sales; sales lines → ck_sales_details.
-• Location, region, area, hierarchy → ck_location, ck_hierarchy_metadata.
-• Division → ck_division.`;
+/** Concept → table and key columns. Use these entity tables for any requested "name" or details; join from code/id columns, never use code as name. */
+const CONCEPT_TO_TABLE_HINTS = `Concept → table and key columns (join from code/id in your fact table; use these for name/details, never code as name):
+
+• User / Salesman / Distributor / Supplier (any person user data required): ck_user. Join on loginid, login_id, salesman_id, supplier, supplierid, created_by, modified_by, approved_by, parent. Use: name, email, mobile, address etc from ck_user table.
+
+• Outlet / Customer: ck_outlet_details. Join on outletcode, outlet_code. Use: outlet_name, address, display_address, contact_name, contactno, beat, beat_name, channel, email, market_name, outlet_type.
+
+• Product / SKU / Batch: ck_productdetails. Join on sku_code, skucode, batch_code. Use: sku_name, item_name, item_desc, sku_description, product, product_description, brand, category, size, mrp.
+
+• Location / Region / Geography: ck_location. Join on location_hierarchy. Use: location_name, name, area, region, zone, city, state, country, district, territory, branch, cluster.
+
+• Hierarchy (org tree): ck_hierarchy_metadata. Join on hierarchy. Columns: hierarchy, parent, location_hierarchy.
+
+• Orders: header ck_orders (order_number, outletcode, supplierid, dates, totals); lines ck_order_details (order_id → ck_orders.id, skucode, batch_code, quantities, amounts).
+
+• Sales / Invoices: header ck_sales (invoice_number, outletcode, order_number, amounts, delivery_date); lines ck_sales_details (sale_id → ck_sales.id, skucode, batch_code, quantities, amounts).
+
+• DMS Loadout: dms_loadout (load_number, supplier → ck_user.loginid for distributor name); dms_loadout_details (load_number, invoice_number, outlet_code, route_code); dms_loadout_items (sku_code, batch_code, quantities).`;
 
 /** Parse API response: extract "sql query:", "explanation:", and "suggested indexes:"; else return raw for out-of-scope */
 function parseSqlResponse(text: string): {
