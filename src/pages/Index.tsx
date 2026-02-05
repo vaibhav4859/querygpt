@@ -29,6 +29,7 @@ const Index = () => {
   const [schemaContext, setSchemaContext] = useState<SchemaContext | null>(null);
   const [selectedJiraIssue, setSelectedJiraIssue] = useState<JiraIssueDetail | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const userScrolledUpRef = useRef(false);
   const { isAuthenticated } = useAuth();
   const {
     suggestTables,
@@ -38,6 +39,21 @@ const Index = () => {
     isLoading,
     isSuggestingTables,
   } = useQueryGeneration();
+
+  /** Attach scroll listener to the ScrollArea viewport to track if user scrolled up */
+  useEffect(() => {
+    const root = scrollRef.current;
+    const viewport = root?.firstElementChild as HTMLElement | null;
+    if (!viewport) return;
+    const THRESHOLD = 80;
+    const onScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = viewport;
+      const atBottom = scrollHeight - scrollTop - clientHeight <= THRESHOLD;
+      userScrolledUpRef.current = !atBottom;
+    };
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    return () => viewport.removeEventListener("scroll", onScroll);
+  }, [messages.length, isLoading, isSuggestingTables]);
 
   useEffect(() => {
     return () => {
@@ -89,6 +105,7 @@ const Index = () => {
   };
 
   const handleSubmit = async (query: string) => {
+    userScrolledUpRef.current = false;
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       type: "user",
@@ -167,6 +184,7 @@ const Index = () => {
     messageId: string,
     selectedTables: string[]
   ) => {
+    userScrolledUpRef.current = false;
     const idx = messages.findIndex((m) => m.id === messageId);
     if (idx < 0) return;
     const userMessage = messages[idx - 1];
@@ -208,9 +226,13 @@ const Index = () => {
     }
   };
 
+  /** Auto-scroll to bottom only when new content arrived and user has not scrolled up */
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (userScrolledUpRef.current) return;
+    const root = scrollRef.current;
+    const viewport = (root?.firstElementChild ?? root) as HTMLElement | null;
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
     }
   }, [messages, isLoading, isSuggestingTables]);
 

@@ -35,21 +35,20 @@ explanation: <brief explanation of what the query does>
 suggested indexes: <one index suggestion per line, only indexes that would actually speed up this specific query>
 Do not include any fourth field or extra content.
 - For any dynamic parameter the query needs (e.g. date range, user id, outlet code, filters that the user will supply at runtime), use placeholders in the form \${parameterName}. Examples: \${fromDate}, \${toDate}, \${outletCode}, \${loginid}. Use clear, camelCase names inside the braces. Example: WHERE creation_time >= '\${fromDate}' AND creation_time <= '\${toDate}'.
-- For suggested indexes: (1) Look at the tables and columns provided in the schema — suggest only indexes on tables and columns that actually exist there; do not invent table or column names. (2) Only suggest an index if the query uses that column in WHERE, JOIN ON, ORDER BY, or GROUP BY. (3) Prefer columns that are good for indexing (e.g. IDs, codes, dates used in filters) and avoid suggesting indexes on columns that would not help this query or that are not in the schema. (4) Be specific: use exact table and column names from the schema, e.g. "ck_orders(creation_time, outletcode)" or "CREATE INDEX idx_orders_outlet ON ck_orders(outletcode);". (5) If no index would meaningfully help, or columns are not in the schema, output "None" or one line saying no additional indexes needed.`;
+- For suggested indexes: (1) Look at the tables and columns provided in the schema — suggest only indexes on tables and columns that actually exist there; do not invent table or column names. (2) Only suggest an index if the query uses that column in WHERE, JOIN ON, ORDER BY, or GROUP BY. (3) Prefer columns that are good for indexing (e.g. IDs, codes, dates used in filters) and avoid suggesting indexes on columns that would not help this query or that are not in the schema. (4) Be specific: use exact table and column names from the schema, e.g. "ck_orders(creation_time, outletcode)" or "CREATE INDEX idx_orders_outlet ON ck_orders(outletcode);". (5) If no index would meaningfully help, or columns are not in the schema, output "None" or one line saying no additional indexes needed.
+- For any requested "Name" (e.g. Distributor Name, Customer Name): join to the entity table that has the name column and select it; never use a code or ID as the name.`;
 
 const TABLE_SUGGEST_PROMPT = `You are a database schema expert. Given a natural language question and a list of database tables with descriptions, respond with ONLY a comma-separated list of table names that are relevant to answer the question. Use only the exact table names provided. No other text, explanation, or punctuation. Example: ck_orders,ck_order_details,ck_outlet_details`;
 
-/** When the query needs these concepts, use the corresponding table (for name, email, details, etc.). */
-const CONCEPT_TO_TABLE_HINTS = [
-  'When the query needs user name, email, login id, mobile, or any user-related information → use ck_user.',
-  'When the query needs outlet name, address, outlet code, or outlet details → use ck_outlet_details.',
-  'When the query needs product name, SKU, batch, or product details → use ck_productdetails.',
-  'Order header (order number, dates, totals) → ck_orders; order line items (quantity, product per order) → ck_order_details.',
-  'Sales/invoice header → ck_sales; sales line items → ck_sales_details.',
-  'Location, region, state, area, or location hierarchy → ck_location.',
-  'Hierarchy path or metadata → ck_hierarchy_metadata.',
-  'Division or channel division → ck_division.',
-];
+/** Concept → table/column. Shown early so the model uses the right entity table for names and concepts. */
+const CONCEPT_TO_TABLE_HINTS = `Concept → table (use these when the query asks for the following):
+• User / Salesman / Distributor / Supplier (person) name → ck_user.name; join on loginid, salesman_id, supplier, created_by, etc.
+• Outlet / Customer name → ck_outlet_details.outlet_name; join on outletcode / outlet_code.
+• Product name, SKU, batch → ck_productdetails; join on sku_code / skucode, batch_code.
+• Order header (number, dates, totals) → ck_orders; order lines → ck_order_details.
+• Sales / invoice header → ck_sales; sales lines → ck_sales_details.
+• Location, region, area, hierarchy → ck_location, ck_hierarchy_metadata.
+• Division → ck_division.`;
 
 /** Parse API response: extract "sql query:", "explanation:", and "suggested indexes:"; else return raw for out-of-scope */
 function parseSqlResponse(text: string): {
@@ -243,12 +242,6 @@ function buildSchemaContextString(
       lines.push('');
     }
   }
-  lines.push('Concept-to-table (use the right table when the query asks for):');
-  lines.push('');
-  for (const hint of CONCEPT_TO_TABLE_HINTS) {
-    lines.push(`  ${hint}`);
-  }
-  lines.push('');
   return lines.join('\n');
 }
 
@@ -277,6 +270,8 @@ function buildSystemInstruction(
   const parts = [
     SQL_SYSTEM_PROMPT,
     '',
+    CONCEPT_TO_TABLE_HINTS,
+    '',
     schemaBlock,
     '',
   ];
@@ -299,6 +294,8 @@ function buildSqlMessage(
   const jiraBlock = jiraContext ? buildJiraContextString(jiraContext) : '';
   const parts = [
     SQL_SYSTEM_PROMPT,
+    '',
+    CONCEPT_TO_TABLE_HINTS,
     '',
     schemaBlock,
     '',
