@@ -32,7 +32,8 @@ const SQL_SYSTEM_PROMPT = `You are SalesCode QueryGPT. SalesCode QueryGPT ONLY h
 - When the user asks for a SQL query, reply ONLY in this exact format with no other text, markdown, or headers:
 sql query: <your SQL here>
 explanation: <brief explanation of what the query does>
-Do not include any third field or extra content.`;
+Do not include any third field or extra content.
+- For any dynamic parameter the query needs (e.g. date range, user id, outlet code, filters that the user will supply at runtime), use placeholders in the form \${parameterName}. Examples: \${fromDate}, \${toDate}, \${outletCode}, \${loginid}. Use clear, camelCase names inside the braces. Example: WHERE creation_time >= '\${fromDate}' AND creation_time <= '\${toDate}'.`;
 
 const TABLE_SUGGEST_PROMPT = `You are a database schema expert. Given a natural language question and a list of database tables with descriptions, respond with ONLY a comma-separated list of table names that are relevant to answer the question. Use only the exact table names provided. No other text, explanation, or punctuation. Example: ck_orders,ck_order_details,ck_outlet_details`;
 
@@ -248,7 +249,7 @@ function buildSystemInstruction(
   ];
   if (jiraBlock) parts.push(jiraBlock);
   parts.push(
-    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly.' +
+    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly. For dynamic parameters (e.g. dates, filters), use placeholders like ${fromDate}, ${toDate}.' +
       (jiraContext ? ' Use the Jira context above to align columns, filters, and rules with the report if applicable.' : '')
   );
   return parts.join('\n');
@@ -273,7 +274,7 @@ function buildSqlMessage(
   parts.push(
     `User (tenant: ${tenant}) question: ${userMessage}`,
     '',
-    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly.' +
+    'Generate a single SQL query and a brief explanation using only the tables and columns above. Use the listed joins/foreign keys to join tables correctly. For dynamic parameters (e.g. dates, filters), use placeholders like ${fromDate}, ${toDate}.' +
       (jiraContext ? ' Use the Jira context above to align columns, filters, and rules with the report if applicable.' : '')
   );
   return parts.join('\n');
