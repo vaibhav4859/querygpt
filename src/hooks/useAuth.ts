@@ -9,6 +9,18 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
+const ALLOWED_EMAIL_DOMAIN = import.meta.env.VITE_ALLOWED_EMAIL_DOMAIN;
+
+export const ALLOWED_EMAIL_DOMAIN_MESSAGE =
+  typeof ALLOWED_EMAIL_DOMAIN === 'string' && ALLOWED_EMAIL_DOMAIN
+    ? `Only ${ALLOWED_EMAIL_DOMAIN} emails are allowed.`
+    : 'Allowed email domain is not configured.';
+
+export function isAllowedEmail(email: string | null): boolean {
+  if (!email || typeof ALLOWED_EMAIL_DOMAIN !== 'string' || !ALLOWED_EMAIL_DOMAIN) return false;
+  return email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN.toLowerCase());
+}
+
 export interface AuthUser {
   id: string;
   email: string | null;
@@ -45,6 +57,16 @@ export function useAuth() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser && !isAllowedEmail(fbUser.email ?? null)) {
+        firebaseSignOut(auth).then(() => {
+          setState({
+            user: null,
+            loading: false,
+            error: new Error(ALLOWED_EMAIL_DOMAIN_MESSAGE),
+          });
+        });
+        return;
+      }
       setState((prev) => ({
         ...prev,
         user: mapFirebaseUser(fbUser),
@@ -58,7 +80,18 @@ export function useAuth() {
   const signInWithGoogle = async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      const { user } = await signInWithPopup(auth, new GoogleAuthProvider());
+      if (!isAllowedEmail(user.email ?? null)) {
+        await firebaseSignOut(auth);
+        const err = new Error(ALLOWED_EMAIL_DOMAIN_MESSAGE);
+        setState((prev) => ({ ...prev, loading: false, user: null, error: err }));
+        toast({
+          title: 'Access restricted',
+          description: ALLOWED_EMAIL_DOMAIN_MESSAGE,
+          variant: 'destructive',
+        });
+        return;
+      }
       toast({
         title: 'Signed in',
         description: 'You are now signed in with Google.',
@@ -95,5 +128,6 @@ export function useAuth() {
     signInWithGoogle,
     signOut,
     isAuthenticated: !!state.user,
+    isAllowedUser: !!state.user && isAllowedEmail(state.user.email),
   };
 }
